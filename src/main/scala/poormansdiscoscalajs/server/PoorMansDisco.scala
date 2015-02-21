@@ -9,9 +9,7 @@ import scala.scalajs.js.annotation.JSExport
 
 
 @JSExport
-case class Event(val deltaTime: Double, val message: Int) {
-  override def toString(): String = s"Event(${deltaTime},${message})"
-}
+case class Event(val deltaTime: Double, val message: Int)
 
 object PoorMansDisco extends JSApp {
 
@@ -21,6 +19,6 @@ object PoorMansDisco extends JSApp {
     }
 
   def main(): Unit = {
-    messages.foreach(e => println(s"Message: ${e.message}, deltaTime: ${e.deltaTime}"))
+    messages.foreach(println)
   }
 }
