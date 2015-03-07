@@ -1,0 +1,24 @@
+<!doctype html>
+
+<html lang="en" ng-app="midiPadApp">
+<head>
+    <meta charset="utf-8">
+    <title>midiPad</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var socket = io();
+        socket.on('something', function(msg){
+            console.log('Received message', msg);
+        });
+
+
+        socket.emit('getServerTime', function(){
+
+        });
+    </script>
+</head>
+
+<body>
+
+</body>
+</html>

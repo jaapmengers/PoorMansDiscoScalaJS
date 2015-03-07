@@ -7,4 +7,5 @@ scalaJSStage in Global := FastOptStage
 
 libraryDependencies += "org.monifu" %%% "monifu" % "0.15.0"
 jsDependencies += ProvidedJS / "midiFFI.js"
+jsDependencies += ProvidedJS / "server.js"
 autoCompilerPlugins := true
