@@ -8,8 +8,6 @@ var io = require('socket.io').listen(server, {log: false});
 
 app.use(express.static(path.join(__dirname, '../../../', 'public')));
 
-console.log('Server time', getServerTime());
-
 var port = process.env.PORT || 5000;
 
 global.sendMessage = function(eventName, msg){
@@ -21,6 +19,9 @@ io.sockets.on('connection', function(socket){
         socket.emit('sendServerTime', new Date().getTime());
     });
 });
+
+
+global.app = app;
 
 /* Listen */
 server.listen(port);

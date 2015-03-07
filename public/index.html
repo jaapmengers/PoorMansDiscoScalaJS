@@ -5,7 +5,11 @@
     <meta charset="utf-8">
     <title>midiPad</title>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/lib/poormansdisco.js"></script>
     <script>
+
+        poormansdiscoscalajs.client.DiscoClient().main()
+
         var socket = io();
         socket.on('something', function(msg){
             console.log('Received message', msg);
