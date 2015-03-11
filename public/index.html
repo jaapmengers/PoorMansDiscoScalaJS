@@ -1,28 +1,24 @@
 <!doctype html>
-
-<html lang="en" ng-app="midiPadApp">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <title>midiPad</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/lib/poormansdisco.js"></script>
-    <script>
-
-        poormansdiscoscalajs.client.DiscoClient().main()
-
-        var socket = io();
-        socket.on('something', function(msg){
-            console.log('Received message', msg);
-        });
-
-
-        socket.emit('getServerTime', function(){
-
-        });
-    </script>
 </head>
 
 <body>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/lib/poormansdisco.js"></script>
+  <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react-with-addons.js"></script>
+  <script>
+    poormansdiscoscalajs.client.DiscoClient().main()
 
+    var socket = io.connect();
+    socket.on('something', function(msg){
+      if(window.eventreceived){
+        window.eventreceived(msg);
+      }
+      console.log('Received message', msg);
+    });
+  </script>
 </body>
 </html>

@@ -18,8 +18,8 @@ var Event = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.server.Even
 //input.ignoreTypes(false, false, false);
 
 setInterval(function(){
-   if(global.eventreceived){
-     global.eventreceived(new Event(200, 248));
-   }
+  if(global.eventreceived){
+    global.eventreceived(new Event(200, 248));
+  }
 }, 500);
 

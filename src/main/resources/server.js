@@ -11,13 +11,12 @@ app.use(express.static(path.join(__dirname, '../../../', 'public')));
 var port = process.env.PORT || 5000;
 
 global.sendMessage = function(eventName, msg){
-    io.sockets.emit(eventName, msg);
-}
+  console.log('Sending message', eventName, msg);
+  io.sockets.emit(eventName, msg);
+};
 
 io.sockets.on('connection', function(socket){
-    socket.on('getServerTime', function(){
-        socket.emit('sendServerTime', new Date().getTime());
-    });
+  console.log('Received connection');
 });
 
 
