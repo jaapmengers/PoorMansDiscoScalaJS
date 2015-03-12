@@ -1,45 +1,44 @@
 package poormansdiscoscalajs.server
 
+import poormansdiscoscalajs.shared.{Formatter, BeatDelta, Event, GetServerTimeResponse}
 import scala.scalajs.js
 import scala.scalajs.js.JSApp
 import monifu.reactive._
 import monifu.concurrent.Scheduler
 import monifu.concurrent.Implicits.globalScheduler
-import scala.scalajs.js.annotation.JSExport
 
-@JSExport
-case class Event(val deltaTime: Double, val message: Int)
-
-case class GetServerTimeResponse(val timestamp: Long)
-
-object Formatters {
-  implicit def unitReader(input: js.Dynamic) = ()
-  implicit def stringWriter(input: String) = js.Any.fromString(input)
-  implicit def getServerTimeResponseWriter(input: GetServerTimeResponse) = js.Dynamic.literal("timestamp" -> input.timestamp)
-}
+case class ExpressInstance(val dynamic: js.Dynamic)
+case class SocketInstance(val dynamic: js.Dynamic)
 
 object ExpressWrapper {
-  import Formatters.unitReader
+  import poormansdiscoscalajs.shared.Formatters.unitFormatter
 
-  def get[U](path:String)(callback: () => U)(implicit expressAp: js.Dynamic, writer: U => js.Any): Unit = {
+  def get[U](path:String)(callback: () => U)(implicit expressInstance: ExpressInstance, formatter: Formatter[U]): Unit = {
     get[Unit, U](path)(_ => callback())
   }
 
-  def get[T, U](path: String)(callback: T => U)(implicit expressAp: js.Dynamic, reader: js.Dynamic => T, writer: U => js.Any): Unit = {
+  def get[T, U](path: String)(callback: T => U)(implicit expressInstance: ExpressInstance, formatterT: Formatter[T], formatterU: Formatter[U]): Unit = {
 
     val marshall: js.Function2[js.Dynamic, js.Dynamic, js.Dynamic] = { (req: js.Dynamic, resp: js.Dynamic) =>
-      val result = callback(reader(req.params))
-      resp.send(writer(result))
+      val result = callback(formatterT.fromJsDynamic(req.params))
+      resp.send(formatterU.toJsDynamic(result))
     }
 
-    expressAp.get(path, marshall)
+    expressInstance.dynamic.get(path, marshall)
+  }
+}
+
+object SocketWrapper {
+  def emit[T](message: T)(implicit socketInstance: SocketInstance, formatter: Formatter[T]): Unit = {
+    socketInstance.dynamic("cmd", formatter.toJsDynamic(message))
   }
 }
 
 object PoorMansDisco extends JSApp {
-  import Formatters.getServerTimeResponseWriter
+  import poormansdiscoscalajs.shared.Formatters.{beatDeltaFormatter, serverTimeResponseFormatter}
 
-  implicit val expressApp = js.Dynamic.global.app
+  implicit val expressInstance = ExpressInstance(js.Dynamic.global.app)
+  implicit val socketInstance = SocketInstance(js.Dynamic.global.sendMessage)
 
   // Handle the GetServerTime-call that is send as a classic HTTP-call
   ExpressWrapper.get[GetServerTimeResponse]("/getServerTime"){ () =>
@@ -51,7 +50,7 @@ object PoorMansDisco extends JSApp {
     Observable.create { o =>
       js.Dynamic.global.eventreceived = (m:Event) => m match {
         // 248 is the code for a timecode signal
-        case x: Event if x.message == 248 => o.onNext(x)
+        case x: Event if x.message == 248 => o.observer.onNext(x)
       }
     }
 
@@ -61,7 +60,7 @@ object PoorMansDisco extends JSApp {
       .map(_.deltaTime)
       .buffer(48)
       .map(x => x.sum / x.length)
-      .map(x => 1/x*10)
-      .foreach(x => js.Dynamic.global.sendMessage("something", x))
+      .map(x => (1/x)*10)
+      .foreach(x => SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis())))
   }
 }

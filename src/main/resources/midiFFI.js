@@ -1,9 +1,9 @@
 //var midi = require('../../../node_modules/midi/midi.js');
 var generated = require('../../../target/scala-2.11/poormansdisco-scalajs-fastopt.js');
-var Event = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.server.Event;
+var Event = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.shared.Event;
 
 //global.input = new midi.input();
-
+//
 //global.eventreceived;
 //
 //input.on('message', function(deltaTime, message) {
@@ -18,8 +18,9 @@ var Event = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.server.Even
 //input.ignoreTypes(false, false, false);
 
 setInterval(function(){
+  console.log('Send interval');
   if(global.eventreceived){
-    global.eventreceived(new Event(200, 248));
+    global.eventreceived(new Event(20, 248));
   }
-}, 500);
+}, 20);
 

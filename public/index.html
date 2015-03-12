@@ -13,11 +13,10 @@
     poormansdiscoscalajs.client.DiscoClient().main()
 
     var socket = io.connect();
-    socket.on('something', function(msg){
+    socket.on('cmd', function(msg){
       if(window.eventreceived){
         window.eventreceived(msg);
       }
-      console.log('Received message', msg);
     });
   </script>
 </body>
