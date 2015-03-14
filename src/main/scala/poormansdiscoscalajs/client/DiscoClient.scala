@@ -3,7 +3,7 @@ package poormansdiscoscalajs.client
 import monifu.concurrent.Scheduler
 import monifu.reactive.Observable
 import org.scalajs.dom
-import poormansdiscoscalajs.shared.{FilterEvent, Event, BeatDelta, Serializables}
+import poormansdiscoscalajs.shared._
 
 import concurrent.duration._
 import scala.scalajs.js
@@ -17,6 +17,9 @@ import dom.ext.Ajax
 import scalajs.concurrent
         .JSExecutionContext
         .Implicits
+import poormansdiscoscalajs.shared.BeatDelta
+import scala.Some
+import poormansdiscoscalajs.shared.FilterEvent
 
 case class State(className: String, intensity: Int)
 
@@ -72,35 +75,43 @@ object DiscoClient extends JSApp{
     }
   }
 
+
+  def getStyle(intensity: Int): List[TagMod] = {
+    val p = Math.round((intensity / 127.0) * 100)
+
+    val value = s"saturate($p%)"
+
+    List("filter".reactStyle := value,
+      "-webkit-filter".reactStyle := value,
+      "-moz-filter".reactStyle := value,
+      "-o-filter".reactStyle := value,
+      "-ms-filter".reactStyle := value)
+  }
+
   def startListening(timeDifference: Double) = {
     println(s"Timediference: $timeDifference")
 
-    val rawEvents: Observable[Event] = {
-      Observable.create { o =>
-        js.Dynamic.global.eventreceived = (input: js.Dynamic) => {
-          val formatter = Serializables.getFormatter(input._type.toString)
-          formatter.fromJsDynamic(input) match {
-            case beatDelta: BeatDelta => o.observer.onNext(beatDelta)
-            case filterEvent: FilterEvent => o.observer.onNext(filterEvent)
-            case _ => throw new Exception("Type not yet supported")
-          }
-        }
+    var beatDelta: BeatDelta => Unit = (e: BeatDelta) => ()
+    var filterEvent: FilterEvent => Unit = (e: FilterEvent) => ()
+
+    val beats = Observable.create { obs =>
+      beatDelta = (e: BeatDelta) => obs.observer.onNext(e)
+    }: Observable[BeatDelta]
+
+    val filters = Observable.create { obs =>
+      filterEvent = (e: FilterEvent) => obs.observer.onNext(e)
+    }: Observable[FilterEvent]
+
+    js.Dynamic.global.eventreceived = (input: js.Dynamic) => {
+      val formatters = Serializables.getFormatter(input._type.toString)
+      formatters.fromJsDynamic(input) match {
+        case bd: BeatDelta => beatDelta(bd)
+        case fe: FilterEvent => filterEvent(fe)
       }
     }
 
-    val beatDeltas = rawEvents.collect {
-      case x: BeatDelta => x
-    }
-
-    val filterEvents = rawEvents.collect {
-      case x: FilterEvent => x
-    }
-
-    beatDeltas.foreach(println)
-    filterEvents.foreach(println)
-
     val nested = Observable.create { o =>
-      beatDeltas.foreach { msg =>
+      beats.foreach { msg =>
         val blinkCorrection = -25
         val originallyStarted = msg.timestamp + timeDifference + blinkCorrection
         val timeTillNextBeat = (Date.now() - originallyStarted) % msg.beatDelta
@@ -144,14 +155,12 @@ object DiscoClient extends JSApp{
      * (40 - 0)/2 = 20
      */
 
-
-
     val flattened = switch(nested)
 
     val Timer = ReactComponentB[Unit]("Timer")
       .initialState(State("off", 64))
-      .backend(new Backend(_, flattened, filterEvents))
-      .render($ => <.div(^.className := $.state.className, $.state.intensity))
+      .backend(new Backend(_, flattened, filters))
+      .render($ => <.div(^.className := $.state.className, getStyle($.state.intensity)))
       .buildU
 
     React.render(Timer(), dom.document.body)

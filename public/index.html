@@ -38,6 +38,7 @@
 
     var socket = io.connect();
     socket.on('cmd', function(msg){
+      console.log(msg);
       if(window.eventreceived){
         window.eventreceived(msg);
       }

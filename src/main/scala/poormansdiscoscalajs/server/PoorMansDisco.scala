@@ -69,6 +69,7 @@ object PoorMansDisco extends JSApp {
       m.message.toArray match {
         case Array(248) => registerBeatEvent(BeatEvent(m.deltaTime))
         case Array(176, _, x) => registerFilterEvent(FilterEvent(x))
+        case _ => //for now, we don't support any other events
       }
     }
 
