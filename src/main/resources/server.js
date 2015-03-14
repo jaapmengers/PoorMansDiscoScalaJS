@@ -11,7 +11,7 @@ app.use(express.static(path.join(__dirname, '../../../', 'public')));
 var port = process.env.PORT || 5000;
 
 global.sendMessage = function(eventName, msg){
-  console.log('Sending message', eventName, msg);
+  //console.log('Sending message', eventName, msg);
   io.sockets.emit(eventName, msg);
 };
 

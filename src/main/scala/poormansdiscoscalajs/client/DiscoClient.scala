@@ -77,7 +77,8 @@ object DiscoClient extends JSApp{
 
 
   def getStyle(intensity: Int): List[TagMod] = {
-    val p = Math.round((intensity / 127.0) * 100)
+    val coefficient = Math.abs(intensity - 63.0) / 63.0
+    val p = Math.round(100.0 - (coefficient * 100.0))
 
     val value = s"saturate($p%)"
 
