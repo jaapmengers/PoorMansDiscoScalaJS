@@ -4,7 +4,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSExport
 
 object Serializables {
-  val allFormatters: Map[String, Formatter[_]] = List(BeatDeltaFormatter).map( t => t._type -> t ).toMap
+  val allFormatters: Map[String, Formatter[_]] = List(BeatDeltaFormatter, FilterEventFormatter).map( t => t._type -> t ).toMap
 
   def getFormatter(_type: String) = {
     val formatOpt = allFormatters.get(_type)
@@ -20,11 +20,15 @@ trait Formatter[T] {
   val _type: String
 }
 
-@JSExport
-case class Event(val deltaTime: Double, val message: Int)
+trait Event
+case class BeatEvent(val deltaTime: Double) extends Event
+case class FilterEvent(val filterItensity: Int) extends Event
+case class BeatDelta(val beatDelta: Double, val timestamp: Long) extends Event
 
 @JSExport
-case class BeatDelta(val beatDelta: Double, val timestamp: Long)
+case class MidiEvent(val deltaTime: Double, val message: js.Array[Int])
+
+
 
 case object BeatDeltaFormatter extends Formatter[BeatDelta] {
   override def toJsDynamic(a: BeatDelta): js.Dynamic = js.Dynamic.literal("beatDelta" -> a.beatDelta, "timestamp" -> a.timestamp, "_type" -> _type)
@@ -50,6 +54,12 @@ case object ServerTimeResponseFormatter extends Formatter[GetServerTimeResponse]
   override val _type: String = "GetServerTimeResponse"
 }
 
+case object FilterEventFormatter extends Formatter[FilterEvent] {
+  override def toJsDynamic(a: FilterEvent): js.Dynamic = js.Dynamic.literal("value" -> a.filterItensity, "_type" -> _type)
+  override def fromJsDynamic(value: js.Dynamic): FilterEvent = FilterEvent(value.value.toString.toInt)
+  override val _type: String = "FilterEvent"
+}
+
 case class GetServerTimeResponse(val timestamp: Long)
 
 object Formatters {
@@ -57,4 +67,5 @@ object Formatters {
   implicit val unitFormatter = UnitFormatter
   implicit val stringFormatter = StringFormatter
   implicit val serverTimeResponseFormatter = ServerTimeResponseFormatter
+  implicit val filterEventFormatter = FilterEventFormatter
 }

@@ -1,26 +1,23 @@
-//var midi = require('../../../node_modules/midi/midi.js');
+var midi = require('../../../node_modules/midi/midi.js');
 var generated = require('../../../target/scala-2.11/poormansdisco-scalajs-fastopt.js');
-var Event = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.shared.Event;
+var MidiEvent = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.shared.MidiEvent;
 
-//global.input = new midi.input();
-//
-//global.eventreceived;
-//
-//input.on('message', function(deltaTime, message) {
-//    if(global.eventreceived){
-//        global.eventreceived(new Event(deltaTime, message[0]));
-//    }
-//});
-//
-////Create a virtual input port.
-//input.openVirtualPort("midiPad");
-//
-//input.ignoreTypes(false, false, false);
+global.input = new midi.input();
 
-setInterval(function(){
-  console.log('Send interval');
-  if(global.eventreceived){
-    global.eventreceived(new Event(20, 248));
-  }
-}, 20);
+input.on('message', function(deltaTime, message) {
+    if(global.eventreceived){
+        global.eventreceived(new MidiEvent(deltaTime, message));
+    }
+});
 
+//Create a virtual input port.
+input.openVirtualPort("midiPad");
+
+input.ignoreTypes(false, false, false);
+
+//setInterval(function(){
+//  console.log('Send interval');
+//  if(global.eventreceived){
+//    global.eventreceived(new Event(20, 248));
+//  }
+//}, 20);

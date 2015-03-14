@@ -1,11 +1,14 @@
 package poormansdiscoscalajs.server
 
-import poormansdiscoscalajs.shared.{Formatter, BeatDelta, Event, GetServerTimeResponse}
+import poormansdiscoscalajs.shared._
 import scala.scalajs.js
 import scala.scalajs.js.JSApp
 import monifu.reactive._
 import monifu.concurrent.Scheduler
 import monifu.concurrent.Implicits.globalScheduler
+import poormansdiscoscalajs.shared.BeatDelta
+import poormansdiscoscalajs.shared.GetServerTimeResponse
+import scala.concurrent.duration.FiniteDuration
 
 case class ExpressInstance(val dynamic: js.Dynamic)
 case class SocketInstance(val dynamic: js.Dynamic)
@@ -35,7 +38,7 @@ object SocketWrapper {
 }
 
 object PoorMansDisco extends JSApp {
-  import poormansdiscoscalajs.shared.Formatters.{beatDeltaFormatter, serverTimeResponseFormatter}
+  import poormansdiscoscalajs.shared.Formatters.{beatDeltaFormatter, serverTimeResponseFormatter, filterEventFormatter}
 
   implicit val expressInstance = ExpressInstance(js.Dynamic.global.app)
   implicit val socketInstance = SocketInstance(js.Dynamic.global.sendMessage)
@@ -45,22 +48,39 @@ object PoorMansDisco extends JSApp {
     GetServerTimeResponse(System.currentTimeMillis())
   }
 
-  // Handle incoming MIDI messages
-  def messages(implicit scheduler: Scheduler): Observable[Event] =
-    Observable.create { o =>
-      js.Dynamic.global.eventreceived = (m:Event) => m match {
-        // 248 is the code for a timecode signal
-        case x: Event if x.message == 248 => o.observer.onNext(x)
+  // Summarize MIDI messages and forward them over a websocket to all connected clients
+  def main(): Unit = {
+
+    // HACK! Monifu won't play nice when I try to split an Observable of a certain
+    // basetrait into two observables of a specific type. So we create two seperate observables
+    // based on function calls and this is the only way I could think of
+    var registerBeatEvent: BeatEvent => Unit = (e: BeatEvent) => ()
+    var registerFilterEvent: FilterEvent => Unit = (e: FilterEvent) => ()
+
+    val beats = Observable.create { o =>
+      registerBeatEvent = (e: BeatEvent) => o.observer.onNext(e)
+    }: Observable[BeatEvent]
+
+    val filters = Observable.create { o =>
+      registerFilterEvent = (e: FilterEvent) => o.observer.onNext(e)
+    }: Observable[FilterEvent]
+
+    js.Dynamic.global.eventreceived = (m: MidiEvent) => {
+      m.message.toArray match {
+        case Array(248) => registerBeatEvent(BeatEvent(m.deltaTime))
+        case Array(176, _, x) => registerFilterEvent(FilterEvent(x))
       }
     }
 
-  // Summarize MIDI messages and forward them over a websocket to all connected clients
-  def main(): Unit = {
-    messages
-      .map(_.deltaTime)
+    beats.map(_.deltaTime)
       .buffer(48)
       .map(x => x.sum / x.length)
       .map(x => (1/x)*10)
-      .foreach(x => SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis())))
+      .foreach { x =>
+      println(x)
+      SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
+    }
+
+    filters.foreach(SocketWrapper.emit)
   }
 }
