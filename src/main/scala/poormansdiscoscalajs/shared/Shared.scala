@@ -22,7 +22,7 @@ trait Formatter[T] {
 
 trait Event
 case class BeatEvent(val deltaTime: Double) extends Event
-case class FilterEvent(val filterItensity: Int) extends Event
+case class FilterEvent(val which: Int, val filterItensity: Int) extends Event
 case class BeatDelta(val beatDelta: Double, val timestamp: Long) extends Event
 
 @JSExport
@@ -55,8 +55,8 @@ case object ServerTimeResponseFormatter extends Formatter[GetServerTimeResponse]
 }
 
 case object FilterEventFormatter extends Formatter[FilterEvent] {
-  override def toJsDynamic(a: FilterEvent): js.Dynamic = js.Dynamic.literal("value" -> a.filterItensity, "_type" -> _type)
-  override def fromJsDynamic(value: js.Dynamic): FilterEvent = FilterEvent(value.value.toString.toInt)
+  override def toJsDynamic(a: FilterEvent): js.Dynamic = js.Dynamic.literal("intensity" -> a.filterItensity, "which" -> a.which, "_type" -> _type)
+  override def fromJsDynamic(value: js.Dynamic): FilterEvent = FilterEvent(which = value.which.toString.toInt,  value.intensity.toString.toInt)
   override val _type: String = "FilterEvent"
 }
 

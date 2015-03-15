@@ -1,5 +1,6 @@
 var express = require('express'),
   http = require('http'),
+  request = require('request'),
   path = require('path');
 
 var app = module.exports = express();
@@ -9,6 +10,8 @@ var io = require('socket.io').listen(server, {log: false});
 app.use(express.static(path.join(__dirname, '../../../', 'public')));
 
 var port = process.env.PORT || 5000;
+
+global.request = request;
 
 global.sendMessage = function(eventName, msg){
   //console.log('Sending message', eventName, msg);
