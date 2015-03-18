@@ -2,6 +2,7 @@ package poormansdiscoscalajs.client
 
 import monifu.concurrent.Scheduler
 import monifu.reactive.Observable
+import monifu.reactive.channels.PublishChannel
 import org.scalajs.dom
 import poormansdiscoscalajs.shared._
 
@@ -83,32 +84,31 @@ object DiscoClient extends JSApp{
     val value = s"saturate($p%)"
 
     List("filter".reactStyle := value,
-      "-webkit-filter".reactStyle := value,
-      "-moz-filter".reactStyle := value,
-      "-o-filter".reactStyle := value,
-      "-ms-filter".reactStyle := value)
+      "WebkitFilter".reactStyle := value,
+      "MozFilter".reactStyle := value,
+      "OFilter".reactStyle := value,
+      "msFilter".reactStyle := value)
   }
 
   def startListening(timeDifference: Double) = {
     println(s"Timediference: $timeDifference")
 
-    var beatDelta: BeatDelta => Unit = (e: BeatDelta) => ()
-    var filterEvent: FilterEvent => Unit = (e: FilterEvent) => ()
-
-    val beats = Observable.create { obs =>
-      beatDelta = (e: BeatDelta) => obs.observer.onNext(e)
-    }: Observable[BeatDelta]
-
-    val filters = Observable.create { obs =>
-      filterEvent = (e: FilterEvent) => obs.observer.onNext(e)
-    }: Observable[FilterEvent]
+    val events = PublishChannel[Event]()
 
     js.Dynamic.global.eventreceived = (input: js.Dynamic) => {
       val formatters = Serializables.getFormatter(input._type.toString)
       formatters.fromJsDynamic(input) match {
-        case bd: BeatDelta => beatDelta(bd)
-        case fe: FilterEvent => filterEvent(fe)
+        case bd: BeatDelta => events.pushNext(bd)
+        case fe: FilterEvent => events.pushNext(fe)
       }
+    }
+
+    val beats = events.collect {
+      case bd: BeatDelta => bd
+    }
+
+    val filters = events.collect {
+      case fe: FilterEvent => fe
     }
 
     val nested = Observable.create { o =>

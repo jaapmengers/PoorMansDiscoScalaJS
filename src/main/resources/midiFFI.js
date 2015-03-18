@@ -18,6 +18,6 @@ input.ignoreTypes(false, false, false);
 //setInterval(function(){
 //  console.log('Send interval');
 //  if(global.eventreceived){
-//    global.eventreceived(new Event(20, 248));
+//    global.eventreceived(new MidiEvent(400, [248]));
 //  }
-//}, 20);
+//}, 400);

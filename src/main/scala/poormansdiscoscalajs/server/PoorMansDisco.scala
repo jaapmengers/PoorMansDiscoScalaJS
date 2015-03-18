@@ -1,5 +1,6 @@
 package poormansdiscoscalajs.server
 
+import monifu.reactive.channels.PublishChannel
 import poormansdiscoscalajs.shared._
 import scala.scalajs.js
 import scala.scalajs.js.JSApp
@@ -51,26 +52,22 @@ object PoorMansDisco extends JSApp {
   // Summarize MIDI messages and forward them over a websocket to all connected clients
   def main(): Unit = {
 
-    // HACK! Monifu won't play nice when I try to split an Observable of a certain
-    // basetrait into two observables of a specific type. So we create two seperate observables
-    // based on function calls and this is the only way I could think of
-    var registerBeatEvent: BeatEvent => Unit = (e: BeatEvent) => ()
-    var registerFilterEvent: FilterEvent => Unit = (e: FilterEvent) => ()
-
-    val beats = Observable.create { o =>
-      registerBeatEvent = (e: BeatEvent) => o.observer.onNext(e)
-    }: Observable[BeatEvent]
-
-    val filters = Observable.create { o =>
-      registerFilterEvent = (e: FilterEvent) => o.observer.onNext(e)
-    }: Observable[FilterEvent]
+    val channel = PublishChannel[Event]()
 
     js.Dynamic.global.eventreceived = (m: MidiEvent) => {
       m.message.toArray match {
-        case Array(248) => registerBeatEvent(BeatEvent(m.deltaTime))
-        case Array(176, _, x) => registerFilterEvent(FilterEvent(x))
+        case Array(248) => channel.pushNext(BeatEvent(m.deltaTime))
+        case Array(176, _, x) => channel.pushNext(FilterEvent(x))
         case _ => //for now, we don't support any other events
       }
+    }
+
+    val beats = channel.collect {
+      case b: BeatEvent => b
+    }
+
+    val filters = channel.collect {
+      case f: FilterEvent => f
     }
 
     beats.map(_.deltaTime)
