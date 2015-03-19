@@ -1,5 +1,6 @@
 package poormansdiscoscalajs.server
 
+import importedjs.socketio.server.socketio
 import monifu.reactive.channels.PublishChannel
 import poormansdiscoscalajs.shared._
 import scala.scalajs.js
@@ -33,8 +34,10 @@ object ExpressWrapper {
 }
 
 object SocketWrapper {
+  val socketManager = socketio.SocketManager
+
   def emit[T](message: T)(implicit socketInstance: SocketInstance, formatter: Formatter[T]): Unit = {
-    socketInstance.dynamic("cmd", formatter.toJsDynamic(message))
+    socketManager.sockets.emit("cmd", formatter.toJsDynamic(message))
   }
 }
 

@@ -1,5 +1,6 @@
 package poormansdiscoscalajs.client
 
+import importedjs.socketio.client.socketio
 import monifu.concurrent.Scheduler
 import monifu.reactive.Observable
 import monifu.reactive.channels.PublishChannel
@@ -94,14 +95,15 @@ object DiscoClient extends JSApp{
     println(s"Timediference: $timeDifference")
 
     val events = PublishChannel[Event]()
-
-    js.Dynamic.global.eventreceived = (input: js.Dynamic) => {
+    
+    val socket = socketio.io.connect()
+    socket.on("cmd", (input: js.Dynamic) => {
       val formatters = Serializables.getFormatter(input._type.toString)
       formatters.fromJsDynamic(input) match {
         case bd: BeatDelta => events.pushNext(bd)
         case fe: FilterEvent => events.pushNext(fe)
       }
-    }
+    })
 
     val beats = events.collect {
       case bd: BeatDelta => bd
