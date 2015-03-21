@@ -35,14 +35,6 @@
   <script type="text/javascript" src="http://cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react-with-addons.js"></script>
   <script>
     poormansdiscoscalajs.client.DiscoClient().main()
-
-    var socket = io.connect();
-    socket.on('cmd', function(msg){
-      console.log(msg);
-      if(window.eventreceived){
-        window.eventreceived(msg);
-      }
-    });
   </script>
 </body>
 </html>

@@ -15,9 +15,8 @@ input.openVirtualPort("midiPad");
 
 input.ignoreTypes(false, false, false);
 
-//setInterval(function(){
-//  console.log('Send interval');
-//  if(global.eventreceived){
-//    global.eventreceived(new Event(20, 248));
-//  }
-//}, 20);
+setInterval(function(){
+  if(global.eventreceived){
+    global.eventreceived(new MidiEvent(400, [248]));
+  }
+}, 400);
