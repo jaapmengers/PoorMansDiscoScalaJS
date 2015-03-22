@@ -1,5 +1,6 @@
 package poormansdiscoscalajs.server
 
+import importedjs.Express
 import importedjs.socketio.server.socketio
 import monifu.reactive.channels.PublishChannel
 import poormansdiscoscalajs.shared._
@@ -12,25 +13,23 @@ import poormansdiscoscalajs.shared.BeatDelta
 import poormansdiscoscalajs.shared.GetServerTimeResponse
 import upickle._
 
-case class ExpressInstance(val dynamic: js.Dynamic)
-case class SocketInstance(val dynamic: js.Dynamic)
 case class RequestInstance(val dynamic: js.Dynamic)
 
 object ExpressWrapper {
   import poormansdiscoscalajs.shared.Formatters.unitFormatter
 
-  def get[U](path:String)(callback: () => U)(implicit expressInstance: ExpressInstance, formatter: Formatter[U]): Unit = {
+  def get[U](path:String)(callback: () => U)(implicit formatter: Formatter[U]): Unit = {
     get[Unit, U](path)(_ => callback())
   }
 
-  def get[T, U](path: String)(callback: T => U)(implicit expressInstance: ExpressInstance, formatterT: Formatter[T], formatterU: Formatter[U]): Unit = {
+  def get[T, U](path: String)(callback: T => U)(implicit formatterT: Formatter[T], formatterU: Formatter[U]): Unit = {
 
     val marshall: js.Function2[js.Dynamic, js.Dynamic, js.Dynamic] = { (req: js.Dynamic, resp: js.Dynamic) =>
       val result = callback(formatterT.fromJsDynamic(req.params))
       resp.send(formatterU.toJsDynamic(result))
     }
 
-    expressInstance.dynamic.get(path, marshall)
+    Express.app.get(path, marshall)
   }
 }
 
@@ -66,7 +65,7 @@ object RequestWrapper {
 object SocketWrapper {
   val socketManager = socketio.SocketManager
 
-  def emit[T](message: T)(implicit socketInstance: SocketInstance, formatter: Formatter[T]): Unit = {
+  def emit[T](message: T)(implicit formatter: Formatter[T]): Unit = {
     socketManager.sockets.emit("cmd", formatter.toJsDynamic(message))
   }
 }
@@ -74,8 +73,6 @@ object SocketWrapper {
 object PoorMansDisco extends JSApp {
   import poormansdiscoscalajs.shared.Formatters.{beatDeltaFormatter, serverTimeResponseFormatter, filterEventFormatter}
 
-  implicit val expressInstance = ExpressInstance(js.Dynamic.global.app)
-  implicit val socketInstance = SocketInstance(js.Dynamic.global.sendMessage)
   implicit val requestInstance = RequestInstance(js.Dynamic.global.request)
 
   // Handle the GetServerTime-call that is send as a classic HTTP-call
