@@ -1,6 +1,6 @@
 package poormansdiscoscalajs.server
 
-import importedjs.Express
+import importedjs.{Request, Express}
 import importedjs.socketio.server.socketio
 import monifu.reactive.channels.PublishChannel
 import poormansdiscoscalajs.shared._
@@ -12,8 +12,6 @@ import monifu.concurrent.Implicits.globalScheduler
 import poormansdiscoscalajs.shared.BeatDelta
 import poormansdiscoscalajs.shared.GetServerTimeResponse
 import upickle._
-
-case class RequestInstance(val dynamic: js.Dynamic)
 
 object ExpressWrapper {
   import poormansdiscoscalajs.shared.Formatters.unitFormatter
@@ -34,7 +32,7 @@ object ExpressWrapper {
 }
 
 object RequestWrapper {
-  def put(fe: FilterEvent)(implicit requestInstance: RequestInstance): Unit = {
+  def put(fe: FilterEvent): Unit = {
 
     val coefficient = fe.filterItensity / 127.0
     val pair = fe.which match {
@@ -56,7 +54,7 @@ object RequestWrapper {
     )
 
     println(s"Sending request: $pair")
-    requestInstance.dynamic.put(JSON.parse(write(options)), (err: js.Dynamic, response: js.Dynamic, body: js.Dynamic) => {
+    Request.requestInstance.put(JSON.parse(write(options)), (err: js.Dynamic, response: js.Dynamic, body: js.Dynamic) => {
       println(s"Statuscode: ${response.statusCode}")
     })
   }
@@ -72,8 +70,6 @@ object SocketWrapper {
 
 object PoorMansDisco extends JSApp {
   import poormansdiscoscalajs.shared.Formatters.{beatDeltaFormatter, serverTimeResponseFormatter, filterEventFormatter}
-
-  implicit val requestInstance = RequestInstance(js.Dynamic.global.request)
 
   // Handle the GetServerTime-call that is send as a classic HTTP-call
   ExpressWrapper.get[GetServerTimeResponse]("/getServerTime"){ () =>
@@ -108,6 +104,8 @@ object PoorMansDisco extends JSApp {
       println(x)
       SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
     }
+
+    RequestWrapper.put(FilterEvent(1, 127))
 
 //    filters.foreach(SocketWrapper.emit)
     filters.foreach(RequestWrapper.put)
