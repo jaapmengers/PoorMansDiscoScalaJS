@@ -13,6 +13,23 @@ import poormansdiscoscalajs.shared.BeatDelta
 import poormansdiscoscalajs.shared.GetServerTimeResponse
 import upickle._
 
+
+trait LightOptions {
+  def toSetting: Map[String, Double]
+}
+
+case class Saturation(val coefficient : Double) extends LightOptions {
+  def toSetting = Map("sat" -> scalajs.js.Math.round(coefficient * 255))
+}
+
+case class Hue(val coefficient: Double) extends LightOptions {
+  def toSetting = Map("sat" -> scalajs.js.Math.round(coefficient * 10000))
+}
+
+case class Brightness(val coefficient: Double) extends LightOptions {
+  def toSetting = Map("bri" -> scalajs.js.Math.round(coefficient * 255))
+}
+
 object ExpressWrapper {
   import poormansdiscoscalajs.shared.Formatters.unitFormatter
 
@@ -31,31 +48,19 @@ object ExpressWrapper {
   }
 }
 
-object RequestWrapper {
-  def put(fe: FilterEvent): Unit = {
+object BridgeAPI {
+  def SetOption(options: LightOptions): Unit = {
 
-    val coefficient = fe.filterItensity / 127.0
-    val pair = fe.which match {
-      case 0 => {
-        Map("sat" -> scalajs.js.Math.round(coefficient * 255))
-      }
-      case 1 => {
-        Map("hue" -> scalajs.js.Math.round(coefficient * 10000))
-      }
-      case 2 => {
-        Map("bri" -> scalajs.js.Math.round(coefficient * 255))
-      }
-    }
-
-    val options = Map(
+    val pair = options.toSetting
+    val requestObj = Map(
       "url" -> "http://192.168.0.19/api/newdeveloper/lights/1/state",
       "body" -> write(pair),
       "method" -> "PUT"
     )
 
-    println(s"Sending request: $pair")
-    Request.requestInstance.put(JSON.parse(write(options)), (err: js.Dynamic, response: js.Dynamic, body: js.Dynamic) => {
-      println(s"Statuscode: ${response.statusCode}")
+    Request.requestInstance.put(JSON.parse(write(requestObj)), (err: js.Dynamic, response: js.Dynamic, body: js.Dynamic) => {
+      // TODO: Response.statusCode is sometimes undefined, figure out if this can be fixed in types. Also, might wanna return a future
+      println("Response received")
     })
   }
 }
@@ -76,6 +81,17 @@ object PoorMansDisco extends JSApp {
     GetServerTimeResponse(System.currentTimeMillis())
   }
 
+  def toLightOptions(fe: FilterEvent): Option[LightOptions] = {
+    val coefficient = fe.filterItensity / 127.0
+
+    fe.which match {
+      case 0 => Some(Saturation(coefficient))
+      case 1 => Some(Hue(coefficient))
+      case 2 => Some(Brightness(coefficient))
+      case _ => None
+    }
+  }
+
   // Summarize MIDI messages and forward them over a websocket to all connected clients
   def main(): Unit = {
     val channel = PublishChannel[Event]()
@@ -84,7 +100,7 @@ object PoorMansDisco extends JSApp {
       m.message.toArray match {
         case Array(248) => channel.pushNext(BeatEvent(m.deltaTime))
         case Array(176, which, intensity) => channel.pushNext(FilterEvent(which, intensity))
-        case _ => //for now, we don't support any other events
+        case _ => println("Other")
       }
     }
 
@@ -93,7 +109,9 @@ object PoorMansDisco extends JSApp {
     }
 
     val filters = channel.collect {
-      case f: FilterEvent => f
+      case f: FilterEvent => toLightOptions(f)
+    }.collect {
+      case Some(lo: LightOptions) => lo
     }
 
     beats.map(_.deltaTime)
@@ -105,9 +123,6 @@ object PoorMansDisco extends JSApp {
       SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
     }
 
-    RequestWrapper.put(FilterEvent(1, 127))
-
-//    filters.foreach(SocketWrapper.emit)
-    filters.foreach(RequestWrapper.put)
+    filters.foreach(BridgeAPI.SetOption)
   }
 }
