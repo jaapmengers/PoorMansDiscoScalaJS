@@ -115,7 +115,7 @@ object PoorMansDisco extends JSApp {
     }
 
     beats.map(_.deltaTime)
-      .buffer(48)
+      .buffer(24)
       .map(x => x.sum / x.length)
       .map(x => (1/x)*10)
       .foreach { x =>

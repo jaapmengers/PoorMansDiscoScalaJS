@@ -7,5 +7,5 @@ package object Request extends js.GlobalScope {
 }
 
 trait RequestInstance extends js.Object {
-  def put(data: js.Any, callback: js.Any): Nothing = js.native
+  def put(data: js.Any, callback: js.Any): js.Any = js.native
 }
