@@ -108,10 +108,14 @@ object PoorMansDisco extends JSApp {
       case b: BeatEvent => b
     }
 
+//    val filters = channel.collect {
+//      case f: FilterEvent => toLightOptions(f)
+//    }.collect {
+//      case Some(lo: LightOptions) => lo
+//    }
+
     val filters = channel.collect {
-      case f: FilterEvent => toLightOptions(f)
-    }.collect {
-      case Some(lo: LightOptions) => lo
+      case f: FilterEvent => f
     }
 
     beats.map(_.deltaTime)
@@ -123,6 +127,6 @@ object PoorMansDisco extends JSApp {
       SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
     }
 
-    filters.foreach(BridgeAPI.SetOption)
+    filters.foreach(SocketWrapper.emit)
   }
 }

@@ -125,39 +125,6 @@ object DiscoClient extends JSApp{
       }
     }: Observable[Observable[Long]]
 
-
-    /**
-     * Tijdsverschil: client loopt 5 seconden voor op server
-     * Latency, eenrichting berekend op 20
-     *
-     * Server verstuurt bericht op 24, met interval van 7
-     * Client ontvangt op 44
-     * Eerstvolgende moment is: 44-2
-     *
-     * Client loop 2 miliseconde voor op server
-     * Dwz als server zegt dat iets op 5 moet gebeuren, dan is dat op de client bij 7
-     *
-     * Server: 1-2-3-4-5-6-7-8-9
-     * Client:       1-2-3-4-5-6-7-8-9
-     *
-     * GetServerTime op 1, response op 5, tijd op server is 6
-     * Latency eenrichting = 5-1/2 = 2
-     *
-     * Request + 2 = 3. 3 bij client is 6 op server, server loopt 3 voor
-     *
-     * Dus als server zegt, dit moet nu (6) gebeuren, dan moet client daar 3 van aftrekken
-     *
-     * 0 - (6 - 1 - 2) = 3 0
-     *
-     *
-     *
-     *
-     * val estimatedLatency = (responseDate - requestDate) / 2
-     * serverDate - requestDate - estimatedLatency
-     *
-     * (40 - 0)/2 = 20
-     */
-
     val flattened = switch(nested)
 
     val Timer = ReactComponentB[Unit]("Timer")
