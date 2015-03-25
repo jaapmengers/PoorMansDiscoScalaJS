@@ -47,15 +47,6 @@ object DiscoClient extends JSApp{
       serverTime = JSON.parse(response.responseText).timestamp.toString().toDouble
       timeDifference = getTimeDifference(requestDate, Date.now(), serverTime)
     } yield startListening(timeDifference)
-
-    /**
-     * - Switch in een functie onderbrengen en kijken of ie als infix gebruikt kan worden
-     * - Blocken op timedifference oid
-     * - On eventReceived een nieuwe observable maken
-     * - Uitrekenen hoeveel tijd er verstreken is sinds de server het bericht verstuurd heeft
-     * - Afwachten tot de eerstvolgende beat is
-     * - Observable maken getimed op frequentie van beats en die toevoegen aan observable van observables
-     */
   }
 
   def getTimeDifference(requestDate: Double, responseDate: Double, serverDate: Double) = {
