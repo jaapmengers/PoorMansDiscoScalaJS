@@ -3,7 +3,7 @@ var express = require('express'),
   request = require('request'),
   path = require('path');
 
-var app = module.exports = express();
+var app = express();
 var server = http.createServer(app);
 var port = process.env.PORT || 5000;
 
