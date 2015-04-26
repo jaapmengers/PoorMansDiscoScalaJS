@@ -1,6 +1,6 @@
 package poormansdiscoscalajs.server
 
-import importedjs.{Request, Express}
+import importedjs.{Midi, Request, Express}
 import importedjs.socketio.server.socketio
 import monifu.reactive.channels.PublishChannel
 import poormansdiscoscalajs.shared._
@@ -12,23 +12,6 @@ import monifu.concurrent.Implicits.globalScheduler
 import poormansdiscoscalajs.shared.BeatDelta
 import poormansdiscoscalajs.shared.GetServerTimeResponse
 import upickle._
-
-
-trait LightOptions {
-  def toSetting: Map[String, Double]
-}
-
-case class Saturation(val coefficient : Double) extends LightOptions {
-  def toSetting = Map("sat" -> scalajs.js.Math.round(coefficient * 255))
-}
-
-case class Hue(val coefficient: Double) extends LightOptions {
-  def toSetting = Map("sat" -> scalajs.js.Math.round(coefficient * 10000))
-}
-
-case class Brightness(val coefficient: Double) extends LightOptions {
-  def toSetting = Map("bri" -> scalajs.js.Math.round(coefficient * 255))
-}
 
 object ExpressWrapper {
   import poormansdiscoscalajs.shared.Formatters.unitFormatter
@@ -48,23 +31,6 @@ object ExpressWrapper {
   }
 }
 
-object BridgeAPI {
-  def SetOption(options: LightOptions): Unit = {
-
-    val pair = options.toSetting
-    val requestObj = Map(
-      "url" -> "http://192.168.0.19/api/newdeveloper/lights/1/state",
-      "body" -> write(pair),
-      "method" -> "PUT"
-    )
-
-    Request.requestInstance.put(JSON.parse(write(requestObj)), (err: js.Dynamic, response: js.Dynamic, body: js.Dynamic) => {
-      // TODO: Response.statusCode is sometimes undefined, figure out if this can be fixed in types. Also, might wanna return a future
-      println("Response received")
-    })
-  }
-}
-
 object SocketWrapper {
   val socketManager = socketio.SocketManager
 
@@ -81,38 +47,25 @@ object PoorMansDisco extends JSApp {
     GetServerTimeResponse(System.currentTimeMillis())
   }
 
-  def toLightOptions(fe: FilterEvent): Option[LightOptions] = {
-    val coefficient = fe.filterItensity / 127.0
+  Midi.midiInput.on("message", { (timestamp: Double, message: js.Array[Int]) =>
+    eventReceived(MidiEvent(timestamp, message))
+  })
 
-    fe.which match {
-      case 0 => Some(Saturation(coefficient))
-      case 1 => Some(Hue(coefficient))
-      case 2 => Some(Brightness(coefficient))
-      case _ => None
+  val channel = PublishChannel[Event]()
+
+  def eventReceived(m: MidiEvent) = {
+    m.message.toArray match {
+      case Array(248) => channel.pushNext(BeatEvent(m.deltaTime))
+      case Array(176, which, intensity) => channel.pushNext(FilterEvent(which, intensity))
+      case _ => println("Other")
     }
   }
 
   // Summarize MIDI messages and forward them over a websocket to all connected clients
   def main(): Unit = {
-    val channel = PublishChannel[Event]()
-
-    js.Dynamic.global.eventreceived = (m: MidiEvent) => {
-      m.message.toArray match {
-        case Array(248) => channel.pushNext(BeatEvent(m.deltaTime))
-        case Array(176, which, intensity) => channel.pushNext(FilterEvent(which, intensity))
-        case _ => println("Other")
-      }
-    }
-
     val beats = channel.collect {
       case b: BeatEvent => b
     }
-
-//    val filters = channel.collect {
-//      case f: FilterEvent => toLightOptions(f)
-//    }.collect {
-//      case Some(lo: LightOptions) => lo
-//    }
 
     val filters = channel.collect {
       case f: FilterEvent => f
@@ -123,9 +76,8 @@ object PoorMansDisco extends JSApp {
       .map(x => x.sum / x.length)
       .map(x => (1/x)*10)
       .foreach { x =>
-      println(x)
-      SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
-    }
+        SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
+      }
 
     filters.foreach(SocketWrapper.emit)
   }

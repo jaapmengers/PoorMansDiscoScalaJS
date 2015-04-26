@@ -4,13 +4,6 @@ var MidiEvent = generated.__ScalaJSExportsNamespace.poormansdiscoscalajs.shared.
 
 var input = new midi.input();
 
-input.on('message', function(deltaTime, message) {
-    if(global.eventreceived){
-        global.eventreceived(new MidiEvent(deltaTime, message));
-    }
-});
-
-//Create a virtual input port.
 input.openVirtualPort("midiPad");
-
 input.ignoreTypes(false, false, false);
+global.midiInput = input;
