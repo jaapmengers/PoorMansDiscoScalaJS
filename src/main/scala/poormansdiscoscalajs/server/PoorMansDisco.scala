@@ -13,6 +13,8 @@ import poormansdiscoscalajs.shared.BeatDelta
 import poormansdiscoscalajs.shared.GetServerTimeResponse
 import upickle._
 
+import scala.util.{Success, Failure, Try}
+
 object ExpressWrapper {
   import poormansdiscoscalajs.shared.Formatters.unitFormatter
 
@@ -22,9 +24,12 @@ object ExpressWrapper {
 
   def get[T, U](path: String)(callback: T => U)(implicit formatterT: Formatter[T], formatterU: Formatter[U]): Unit = {
 
-    val marshall: js.Function2[js.Dynamic, js.Dynamic, js.Dynamic] = { (req: js.Dynamic, resp: js.Dynamic) =>
-      val result = callback(formatterT.fromJsDynamic(req.params))
-      resp.send(formatterU.toJsDynamic(result))
+    val marshall = { (req: js.Dynamic, resp: js.Dynamic) =>
+      val result = formatterT.fromJsDynamic(req.params).map(callback(_))
+      if(result.isSuccess)
+        resp.send(formatterU.toJsDynamic(result.get))
+      else
+        ()
     }
 
     Express.app.get(path, marshall)
@@ -76,8 +81,8 @@ object PoorMansDisco extends JSApp {
       .map(x => x.sum / x.length)
       .map(x => (1/x)*10)
       .foreach { x =>
-        SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
-      }
+      SocketWrapper.emit(BeatDelta(x, System.currentTimeMillis()))
+    }
 
     filters.foreach(SocketWrapper.emit)
   }

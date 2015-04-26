@@ -8,6 +8,7 @@ import org.scalajs.dom
 import poormansdiscoscalajs.shared._
 
 import concurrent.duration._
+import scala.concurrent.Future
 import scala.scalajs.js
 import scala.scalajs.js.{JSON, Date, JSApp}
 import scala.scalajs.js.annotation.JSExport
@@ -16,12 +17,22 @@ import japgolly.scalajs.react.vdom.prefix_<^._
 import monifu.concurrent.Implicits.globalScheduler
 
 import dom.ext.Ajax
+import scala.util.{Failure, Success, Try}
 import scalajs.concurrent
         .JSExecutionContext
         .Implicits
 import poormansdiscoscalajs.shared.BeatDelta
 import scala.Some
 import poormansdiscoscalajs.shared.FilterEvent
+
+object AjaxWrapper {
+  def get[T](path: String)(implicit formatter: Formatter[T]): Future[Try[T]] = {
+    for {
+      response <- Ajax.get(path)
+      parsed = JSON.parse(response.responseText)
+    } yield formatter.fromJsDynamic(parsed)
+  }
+}
 
 case class State(className: String, intensity: Int)
 
@@ -39,13 +50,16 @@ class Backend($: BackendScope[_, State], beatObs: Observable[Long], filterObs: O
 }
 
 object DiscoClient extends JSApp{
+
   @JSExport
   override def main(): Unit = {
+    import poormansdiscoscalajs.shared.Formatters.serverTimeResponseFormatter
+
     val requestDate = Date.now()
     for {
-      response <- Ajax.get("/getServerTime")
-      serverTime = JSON.parse(response.responseText).timestamp.toString().toDouble
-      timeDifference = getTimeDifference(requestDate, Date.now(), serverTime)
+      response <- AjaxWrapper.get[GetServerTimeResponse]("/getServerTime")
+      serverTime = response.getOrElse(throw new Exception("Can't parse serverresponse"))
+      timeDifference = getTimeDifference(requestDate, Date.now(), serverTime.timestamp)
     } yield startListening(timeDifference)
   }
 
@@ -83,14 +97,14 @@ object DiscoClient extends JSApp{
   }
 
   def startListening(timeDifference: Double) = {
-    println(s"Timediference: $timeDifference")
 
     val events = PublishChannel[Event]()
     
     val socket = socketio.io.connect()
-    socket.on("cmd", (input: js.Dynamic) => {
+    socket.on("cmd", callback = (input: js.Dynamic) => {
       val formatters = Serializables.getFormatter(input._type.toString)
-      formatters.fromJsDynamic(input) match {
+      val formatted = formatters.fromJsDynamic(input)
+      if (formatted.isSuccess) formatted.get match {
         case bd: BeatDelta => events.pushNext(bd)
         case fe: FilterEvent => events.pushNext(fe)
       }
