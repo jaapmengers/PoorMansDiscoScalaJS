@@ -40,7 +40,7 @@ object SocketWrapper {
   val socketManager = socketio.SocketManager
 
   def emit[T](message: T)(implicit formatter: Formatter[T]): Unit = {
-    socketManager.sockets.emit("cmd", formatter.toJsDynamic(message))
+    // emit message over socket. Clients listen for messages with name "cmd"
   }
 }
 
@@ -59,11 +59,7 @@ object PoorMansDisco extends JSApp {
   val channel = PublishChannel[Event]()
 
   def eventReceived(m: MidiEvent) = {
-    m.message.toArray match {
-      case Array(248) => channel.pushNext(BeatEvent(m.deltaTime))
-      case Array(176, which, intensity) => channel.pushNext(FilterEvent(which, intensity))
-      case _ => println("Other")
-    }
+    // Match on midiEvent. Beat is 248, Filter is 176
   }
 
   // Summarize MIDI messages and forward them over a websocket to all connected clients

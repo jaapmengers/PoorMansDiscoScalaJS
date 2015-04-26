@@ -24,6 +24,7 @@ import scalajs.concurrent
 import poormansdiscoscalajs.shared.BeatDelta
 import scala.Some
 import poormansdiscoscalajs.shared.FilterEvent
+import poormansdiscoscalajs.shared.Formatters.serverTimeResponseFormatter
 
 object AjaxWrapper {
   def get[T](path: String)(implicit formatter: Formatter[T]): Future[Try[T]] = {
@@ -37,30 +38,15 @@ object AjaxWrapper {
 case class State(className: String, intensity: Int)
 
 class Backend($: BackendScope[_, State], beatObs: Observable[Long], filterObs: Observable[FilterEvent]) {
-  beatObs.foreach { t =>
-    $.modState(s => State("on", s.intensity))
-    Observable.unitDelayed(100.milliseconds, ()).foreach { _ =>
-      $.modState(s => State("off", s.intensity))
-    }
-  }
-
-  filterObs.foreach { t =>
-    $.modState(s => State(s.className, t.filterItensity))
-  }
+  // Iterate over beat and filter events. On beat event, set state on, setTimeout for 100ms and set state off again
+  // For filter events, set the intensity
 }
 
 object DiscoClient extends JSApp{
 
   @JSExport
   override def main(): Unit = {
-    import poormansdiscoscalajs.shared.Formatters.serverTimeResponseFormatter
-
-    val requestDate = Date.now()
-    for {
-      response <- AjaxWrapper.get[GetServerTimeResponse]("/getServerTime")
-      serverTime = response.getOrElse(throw new Exception("Can't parse serverresponse"))
-      timeDifference = getTimeDifference(requestDate, Date.now(), serverTime.timestamp)
-    } yield startListening(timeDifference)
+    // Do getServerTime-call, unmarshall object, calculate timedifference and start listening for events
   }
 
   def getTimeDifference(requestDate: Double, responseDate: Double, serverDate: Double) = {
